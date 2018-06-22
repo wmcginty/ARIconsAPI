@@ -6,12 +6,12 @@
 //
 
 import Vapor
-import FluentSQLite
+import FluentPostgreSQL
 
-struct AppInformation: Content, SQLiteModel, Migration, Parameter {
+struct AppInformation: Content, PostgreSQLModel, Migration, Parameter {
     
     var id: Int?
     let title: String
     let storeURL: URL?
-    let description: String
+    let description: String?
 }

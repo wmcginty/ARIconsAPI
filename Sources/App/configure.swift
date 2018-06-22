@@ -1,10 +1,10 @@
-import FluentSQLite
+import FluentPostgreSQL
 import Vapor
 
 /// Called before your application initializes.
 public func configure(_ config: inout Config, _ env: inout Environment, _ services: inout Services) throws {
     /// Register providers first
-    try services.register(FluentSQLiteProvider())
+    try services.register(FluentPostgreSQLProvider())
 
     /// Register routes to the router
     let router = EngineRouter.default()
@@ -22,14 +22,25 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     services.register(directoryConfig)
     
     // Configure our database
-    var databaseConfig = DatabasesConfig()
-    let db = try SQLiteDatabase(storage: .file(path: "\(directoryConfig.workDir)apps.db"))
-    databaseConfig.add(database: db, as: .sqlite)
-    services.register(databaseConfig)
+    var databases = DatabasesConfig()
+    let databaseConfig = try configuredPostgreSQLDatabaseConfig(with: env)
+    let database = databaseConfig.map(PostgreSQLDatabase.init)
+    database.map { databases.add(database: $0, as: .psql) }
+    services.register(databases)
 
     /// Configure migrations
     var migrations = MigrationConfig()
-    migrations.add(model: AppInformation.self, database: .sqlite)
+    migrations.add(model: AppInformation.self, database: .psql)
     services.register(migrations)
+}
 
+func configuredPostgreSQLDatabaseConfig(with env: Environment) throws -> PostgreSQLDatabaseConfig? {
+    guard let url = Environment.get("DATABASE_URL") else {
+        return PostgreSQLDatabaseConfig(hostname: "localhost",
+                                        port: 5432,
+                                        username: "willmcginty",
+                                        database: "appinfos")
+    }
+    
+    return try PostgreSQLDatabaseConfig(url: url)
 }
